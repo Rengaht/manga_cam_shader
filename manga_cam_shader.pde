@@ -1,4 +1,5 @@
 import processing.video.*;
+import de.looksgood.ani.*;
 
 PShader pixelShader;  
 
@@ -6,6 +7,24 @@ Capture cam;
 static int camWidth = 1280;
 static int camHeight = 720;
 static String deviceID="FaceTime HD Camera (Built-in)";
+
+static int numImage=3;
+PImage images[] = new PImage[numImage];
+PImage imageCover;
+PImage imageEnd;
+PImage imageNext;
+
+enum State {
+  IDLE,
+  PROCESSING,
+  CAPTURE,
+}
+
+State state = State.IDLE;
+Timer progressTimer;
+Timer strengthTimer;
+
+int index=0;
 
 void setup() {
   size(1280, 720, P2D);
@@ -19,6 +38,11 @@ void setup() {
   cam = new Capture(this, camWidth, camHeight, deviceID);
   cam.start();
 
+
+  progressTimer=new Timer(0.0, 1.0, 3, 0);
+  strengthTimer=new Timer(0.0, 1.0, 3, 0);
+  loadImages();
+
 }
 
 void draw() {
@@ -28,13 +52,20 @@ void draw() {
   }
   
   
+  pushMatrix();
   shader(pixelShader);
   
   pixelShader.set("pixelSize", 8.0);  // Try 5, 10, 20, etc.
   pixelShader.set("u_texture", cam); // Or use cam if using webcam
   pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
-  pixelShader.set("strength", mouseY/float(height));
+
+  float ss= sin(strengthTimer.value*PI)+0.5;
+  pixelShader.set("strength", ss);
   
+  float pp= state==State.CAPTURE? 1.0-progressTimer.value: progressTimer.value;  
+  pixelShader.set("progress", pp);
+  pixelShader.set("u_character", images[index]);
+
   // rect(0, 0, width, height);
   beginShape();
   // texture(cam);
@@ -44,6 +75,84 @@ void draw() {
     vertex(0, height,0,1);
   endShape();
 
+  popMatrix();
+  resetShader();
+
+ String txt_fps = String.format("[%s] [%7.2f fps] [%s] [%2f]",  getClass().getSimpleName(), frameRate, state.toString(), progressTimer.value);
+  surface.setTitle(txt_fps);
+
+  progressTimer.update();
+  strengthTimer.update();
+  if(progressTimer.value>=1){
+    onProgressEnd();
+  }
+
+  switch(state){
+    case IDLE:
+      image(imageCover, 0, 0, width, height);
+      break;
+    case CAPTURE:
+      image(imageEnd, 0, 0, width, height);
+      break;    
+  }
+
+
   // image(cam, 0, 0, width, height);
 }
+
+void setState(State set){
+  switch(set){
+    case IDLE:
+      progressTimer.reset();
+      break;
+    case PROCESSING:
+      progressTimer.start(3, 2);
+      strengthTimer.start(4, 0);
+      index=floor(random(0, numImage));
+      break;
+    case CAPTURE:
+      progressTimer.start(2, 3);
+      strengthTimer.start(2, 2);
+      break;
+    
+  }
+  state=set;
+  println("set State: "+state+" =>"+set);
+}
+
+void onProgressStart(){
+  println("Processing Started");  
+}
+
+void onProgressEnd(){
+  println("Processing Ended", state.toString());
+    
+  switch(state){
+      case PROCESSING:
+        setState(State.CAPTURE);
+        break;
+      case CAPTURE:
+        setState(State.IDLE);
+        break;
+  }
+}
+
+void loadImages(){
   
+  for (int i=0; i<numImage; i++){
+    images[i] = loadImage("images/image-"+(i+1)+".png");
+  }
+
+  imageCover = loadImage("images/cover.png");
+  imageEnd = loadImage("images/end.png");
+  imageNext = loadImage("images/next.png");
+
+}
+
+void keyPressed(){
+  switch(key){
+    case 'a':
+      setState(State.PROCESSING);
+      break;
+  } 
+}

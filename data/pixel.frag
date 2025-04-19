@@ -7,6 +7,9 @@ uniform vec2 texOffset;
 uniform float time;
 uniform float strength;
 
+uniform float progress;
+uniform sampler2D u_character;
+
 // uniform sampler2D texture;
 
 varying vec4 vertColor;
@@ -60,33 +63,40 @@ vec4 edge(vec2 vert){
 void main() {
     // Snap texture coordinates to the pixel grid
     vec2 vTexCoord = vertTexCoord.xy;
-    vec2 blockUV = floor(vTexCoord * u_resolution / pixelSize) * pixelSize / u_resolution;
+    float distort=noise(vTexCoord*vec2(23.3,8.7)+time*2.2);
+    float pixscale=floor(distort/0.33)+1.0;
     
-    float distort=smoothstep(noise(blockUV*vec2(251.2,3.5)+time*12.2),0.9,1.0);
+    vec2 blockUV = floor(vTexCoord * u_resolution / (pixelSize*pixscale)) * (pixelSize*pixscale) / u_resolution;
     
-    blockUV += vec2(0,distort*strength);
+    float distortx=smoothstep(0.8, 1.0, noise(blockUV*vec2(4.2,93.5)+time*2.2)*strength);
+    float distorty=smoothstep(0.8, 1.0, noise(blockUV*vec2(251.2,3.5)+time*12.2)*strength*2.0);
+    
+    blockUV += vec2(distortx,distorty);
     // blockUV=mod(blockUV,vec2(1.0));
 
     vec4 color = texture(u_texture, blockUV);
+    vec4 character=1.0-texture(u_character, blockUV);
+
+    color=mix(color, character, progress);
 
     // gray scale
     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
     // add contract
     gray = (gray - 0.5) * 2.0 + 0.5;
 
-    float edge=length(edge(blockUV));
+    // float edge=length(edge(blockUV));
     
     vec3 output_color=color.rgb*gray;
     
     float discrete=1.0/4.0;
     output_color=floor(output_color/discrete)*discrete;
     // output_color=pow(output_color, vec3(2.0));
-    // output_color=smoothstep(output_color, vec3(0.2), vec3(1.0));
+    output_color=smoothstep(vec3(0.5), vec3(1.0),output_color);
 
-    if(edge>threshold){
-        gl_FragColor = vec4(1.0-output_color.rgb, 1.0);
-    }
-    else gl_FragColor = vec4(output_color.rgb, 1.0);
+    // if(edge>threshold){
+    //     gl_FragColor = vec4(1.0-output_color.rgb, 1.0);
+    // }
+    gl_FragColor = vec4(output_color.rgb, 1.0);
 
-    // gl_FragColor= vec4(vertTexCoord.xy, 0.0, 1.0);
+    // gl_FragColor= vec4(vec3(distort), 1.0);
 }
