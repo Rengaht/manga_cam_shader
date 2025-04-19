@@ -13,6 +13,7 @@ PImage images[] = new PImage[numImage];
 PImage imageCover;
 PImage imageEnd;
 PImage imageNext;
+// PImage imageBlank;
 
 enum State {
   IDLE,
@@ -23,6 +24,7 @@ enum State {
 State state = State.IDLE;
 Timer progressTimer;
 Timer strengthTimer;
+Timer textTimer;
 
 int index=0;
 
@@ -41,6 +43,9 @@ void setup() {
 
   progressTimer=new Timer(0.0, 1.0, 3, 0);
   strengthTimer=new Timer(0.0, 1.0, 3, 0);
+  textTimer=new Timer(0.0, 1.0, 2, 0);
+  textTimer.start();
+
   loadImages();
 
 }
@@ -55,7 +60,7 @@ void draw() {
   pushMatrix();
   shader(pixelShader);
   
-  pixelShader.set("pixelSize", 8.0);  // Try 5, 10, 20, etc.
+  pixelShader.set("pixelSize", 4.0);  // Try 5, 10, 20, etc.
   pixelShader.set("u_texture", cam); // Or use cam if using webcam
   pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
 
@@ -65,6 +70,20 @@ void draw() {
   float pp= state==State.CAPTURE? 1.0-progressTimer.value: progressTimer.value;  
   pixelShader.set("progress", pp);
   pixelShader.set("u_character", images[index]);
+  switch(state){
+    case IDLE:
+      pixelShader.set("u_title", imageCover);
+      pixelShader.set("text_progress", textTimer.value);
+      break;
+    case CAPTURE:
+      pixelShader.set("u_title", imageEnd);
+      pixelShader.set("text_progress", sin(textTimer.value*PI));
+      break;    
+    default :
+      pixelShader.set("text_progress", 1.0-textTimer.value);
+      break;
+  }
+  
 
   // rect(0, 0, width, height);
   beginShape();
@@ -83,18 +102,13 @@ void draw() {
 
   progressTimer.update();
   strengthTimer.update();
+  textTimer.update();
+
   if(progressTimer.value>=1){
     onProgressEnd();
   }
 
-  switch(state){
-    case IDLE:
-      image(imageCover, 0, 0, width, height);
-      break;
-    case CAPTURE:
-      image(imageEnd, 0, 0, width, height);
-      break;    
-  }
+
 
 
   // image(cam, 0, 0, width, height);
@@ -104,15 +118,18 @@ void setState(State set){
   switch(set){
     case IDLE:
       progressTimer.reset();
+      textTimer.start(2,0);
       break;
     case PROCESSING:
       progressTimer.start(3, 2);
       strengthTimer.start(4, 0);
+      textTimer.start(1,0);
       index=floor(random(0, numImage));
       break;
     case CAPTURE:
       progressTimer.start(2, 3);
       strengthTimer.start(2, 2);
+      textTimer.start(5,0);
       break;
     
   }
@@ -146,6 +163,7 @@ void loadImages(){
   imageCover = loadImage("images/cover.png");
   imageEnd = loadImage("images/end.png");
   imageNext = loadImage("images/next.png");
+  // imageBlank = loadImage("images/blank.png");
 
 }
 

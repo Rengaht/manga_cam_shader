@@ -10,6 +10,8 @@ uniform float strength;
 uniform float progress;
 uniform sampler2D u_character;
 
+uniform sampler2D u_title;
+uniform float text_progress;
 // uniform sampler2D texture;
 
 varying vec4 vertColor;
@@ -96,7 +98,11 @@ void main() {
     // if(edge>threshold){
     //     gl_FragColor = vec4(1.0-output_color.rgb, 1.0);
     // }
-    gl_FragColor = vec4(output_color.rgb, 1.0);
+
+    // title
+    vec4 title_color=texture2D(u_title, vertTexCoord.xy + vec2(0.0,0.05)*pixelSize*smoothstep(0.8, 1.0, distortx));
+    
+    gl_FragColor = vec4(output_color.rgb + title_color.rgb*text_progress, 1.0);
 
     // gl_FragColor= vec4(vec3(distort), 1.0);
 }
