@@ -86,8 +86,9 @@ void draw() {
   // pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
   pixelShader.set("time", millis()/1000.0);
 
-  float ss= sin(strengthTimer.value*PI)+0.5;
-  pixelShader.set("strength", ss);
+  float ss= sin(strengthTimer.value*PI)+0.15;
+  // pixelShader.set("strength", ss);
+  pixelShader.set("strength", map(mouseY, 0, height, 0.0, 1.0));
   
   float pp= state==State.CAPTURE? 1.0-progressTimer.value: progressTimer.value;  
   pixelShader.set("progress", pp);

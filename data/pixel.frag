@@ -84,25 +84,31 @@ void main() {
     // Snap texture coordinates to the pixel grid
     vec2 vTexCoord = vec2(1.0-vertTexCoord.x, vertTexCoord.y);
     
-    float distort=smoothstep(0.33, 1.0, noise(vTexCoord*vec2(0.1, 2.87)+time*4.2));
-    float pixscale=1.0;//floor(distort/0.25)+1.0;
+    float delta=noise(vTexCoord*vec2(4.1, 2.1)+time*0.5);
+    float distort=smoothstep(0.75-strength*0.5, 1.0, noise(vTexCoord*vec2(620.1, 6.87-strength*10.0)+time*(strength*10+1.2)));
+    
+    float pixscale=floor(distort/0.25)*strength+1.0;
     
 
     vec2 blockUV = floor(vTexCoord * u_resolution / (pixelSize*pixscale)) * (pixelSize*pixscale) / u_resolution;
     
-    float distortx=smoothstep(0.5, 1.0, noise(blockUV*vec2(4.2,93.5)+time*2.2)*2.0-1.0)*strength;
+    float distortx=smoothstep(0.5, 1.0, noise(blockUV*vec2(4.2,93.5)+distort*time*2.2)*2.0-1.0)*strength;
     float distorty=(smoothstep(0.5, 1.0, noise(blockUV*vec2(251.2,3.5)+time*12.2))*2.0-1.0)*strength;
     
-    vec2 offset=vec2(distortx,distorty)*pixelSize*pixscale/u_resolution;
-    // blockUV += offset;
+    vec4 uflow=texture(u_flow, vec2(blockUV.x, 1.0-blockUV.y));    
+    vec2 offset=vec2(distortx,distorty)*pixelSize*20.0/u_resolution;
+    blockUV += offset;
     // blockUV=mod(blockUV,vec2(1.0));
     
-    vec4 uflow=texture(u_flow, vec2(blockUV.x, 1.0-blockUV.y));    
-    // vTexCoord += vec2(uflow.x, uflow.y);
-
-    vec4 color = texture(u_texture, blockUV-uflow.xy);
+    // offset.y*=length(uflow.xy);
+    vec2 flow_offset= smoothstep(vec2(0.1), vec2(0.8),uflow.xy*5.0/u_resolution);
     
-    vec4 character_tex=1.0-texture(u_character, blockUV);
+    vTexCoord+=flow_offset;
+    // vTexCoord += offset;
+
+    vec4 color = texture(u_texture, blockUV-uflow.xy*pixelSize*10.0/u_resolution);
+    
+    vec4 character_tex=1.0-texture(u_character, blockUV+flow_offset);
 
     color=mix(color, character_tex, progress);
 
@@ -118,12 +124,12 @@ void main() {
 
     // float edge=length(edge(blockUV));
     
-    vec3 output_color=color.rgb*pix;//*gray;
+    vec3 output_color=color.rgb*pix;
     
     float discrete=1.0/4.0;
     output_color=floor(output_color/discrete)*discrete;
     // output_color=pow(output_color, vec3(2.0));
-    output_color=smoothstep(vec3(0.25), vec3(1.0),output_color);
+    output_color=smoothstep(vec3(0.25), vec3(0.7),output_color);
 
 
     // if(edge>threshold){
@@ -131,9 +137,9 @@ void main() {
     // }
 
     // title
-    vec4 title_color=texture2D(u_title, vertTexCoord.xy + vec2(0.0,0.05)*pixelSize);
+    vec4 title_color=texture2D(u_title, vertTexCoord.xy+flow_offset);
     
     gl_FragColor = vec4((output_color.rgb + title_color.rgb*text_progress), 1.0);
 
-    // gl_FragColor+= vec4(uflow.xy,0.0, 1.0);
+    gl_FragColor*= (1.0+2.5*length(uflow.xy));
 }

@@ -30,7 +30,7 @@ void drawFlow(){
     // flow visualizations
     opticalflow.param.display_mode = 0;
     opticalflow.renderVelocityShading(pg_oflow);
-    opticalflow.renderVelocityStreams(pg_oflow, 5);
+    // opticalflow.renderVelocityStreams(pg_oflow, 5);
     
     // display result
     // background(0);
