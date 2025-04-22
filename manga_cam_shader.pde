@@ -6,6 +6,8 @@ import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
 import com.thomasdiewald.pixelflow.java.imageprocessing.filter.DwFilter;
 
 
+static boolean useDemoVideo = true;
+
 PShader pixelShader;  
 
 Capture cam;
@@ -19,7 +21,10 @@ PImage images[] = new PImage[numImage];
 PImage imageCover;
 PImage imageEnd;
 PImage imageNext;
+PGraphics2D imageBackground;
 // PImage imageBlank;
+
+Movie video;
 
 enum State {
   IDLE,
@@ -59,21 +64,49 @@ void setup() {
   textTimer=new Timer(0.0, 1.0, 2, 0);
   textTimer.start();
 
+
+  imageBackground=(PGraphics2D) createGraphics(camWidth, camHeight, P2D);
+  imageBackground.beginDraw();
+    imageBackground.image(cam, 0, 0);
+  imageBackground.endDraw();
+
+  pixelShader.set("u_background", imageBackground);
+
+
   loadImages();
+
+  if(useDemoVideo){
+    video = new Movie(this, "videos/1072317980-preview.mp4");
+    video.loop();
+    video.play();
+  }
 
   initFlow();
 }
 
 void draw() {
 
-  if(cam.available()) {
-    cam.read();
+  background(0);
 
-    pg_cam.beginDraw();
-    pg_cam.image(cam, 0, 0);
-    pg_cam.endDraw();
+  if(useDemoVideo){
+    if(video.available()) {
+      video.read();
+      pg_cam.beginDraw();
+        pg_cam.image(video, 0, 0);
+      pg_cam.endDraw();
 
-    opticalflow.update(pg_cam); 
+      opticalflow.update(pg_cam); 
+    }
+  }else{
+    if(cam.available()) {
+      cam.read();
+
+      pg_cam.beginDraw();
+        pg_cam.image(cam, 0, 0);
+      pg_cam.endDraw();
+
+      opticalflow.update(pg_cam); 
+    }
   }
   DwFilter.get(context).luminance.apply(pg_cam, pg_cam);
   
@@ -82,13 +115,19 @@ void draw() {
   shader(pixelShader);
   
   pixelShader.set("pixelSize", pixelSize);  // Try 5, 10, 20, etc.
-  pixelShader.set("u_texture", cam); // Or use cam if using webcam
+  
+  if(useDemoVideo){
+    pixelShader.set("u_texture", video);
+  }else{
+    pixelShader.set("u_texture", cam); // Or use cam if using webcam
+  }
+
   // pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
   pixelShader.set("time", millis()/1000.0);
 
   float ss= sin(strengthTimer.value*PI)+0.15;
-  // pixelShader.set("strength", ss);
-  pixelShader.set("strength", map(mouseY, 0, height, 0.0, 1.0));
+  pixelShader.set("strength", ss);
+  // pixelShader.set("strength", ss+map(mouseY, 0, height, 0.0, 1.0));
   
   float pp= state==State.CAPTURE? 1.0-progressTimer.value: progressTimer.value;  
   pixelShader.set("progress", pp);
@@ -97,15 +136,20 @@ void draw() {
     case IDLE:
       pixelShader.set("u_title", imageCover);
       pixelShader.set("text_progress", textTimer.value);
+      // if(frameCount%120==0 && random(0, 1)<0.5){
+      //   setNextIndex();
+      // }
       break;
     case CAPTURE:
       pixelShader.set("u_title", imageEnd);
-      pixelShader.set("text_progress", sin(textTimer.value*PI));
+      pixelShader.set("text_progress", constrain(sin(textTimer.value*PI)*2.0, 0,1));
       break;    
     default :
       pixelShader.set("text_progress", 1.0-textTimer.value);
       break;
   }
+
+  pixelShader.set("u_background", imageBackground);      
 
   drawFlow();
   pixelShader.set("u_flow", pg_oflow);
@@ -134,10 +178,18 @@ void draw() {
   }
 
 // drawFlow();
+// image(imageBackground, 0, 0, width/4, height/4);
   
 
 
   // image(cam, 0, 0, width, height);
+}
+
+void setNextIndex(){
+  
+  if(useDemoVideo) index=(index+1)%numImage;
+  else index=floor(random(0, numImage));
+
 }
 
 void setState(State set){
@@ -147,15 +199,16 @@ void setState(State set){
       textTimer.start(2,0);
       break;
     case PROCESSING:
-      progressTimer.start(3, 2);
-      strengthTimer.start(4, 0);
-      textTimer.start(1,0);
-      index=floor(random(0, numImage));
+      progressTimer.start(0.2, 0.5);
+      strengthTimer.start(0.8, 0);
+      textTimer.start(0.5,0);
+      // index=floor(random(0, numImage));
+      setNextIndex();
       break;
     case CAPTURE:
-      progressTimer.start(2, 3);
-      strengthTimer.start(2, 2);
-      textTimer.start(5,0);
+      progressTimer.start(1.5, 3);
+      strengthTimer.start(0.8, 3.7);
+      textTimer.start(4.5,0);
       break;
     
   }
@@ -197,6 +250,12 @@ void keyPressed(){
   switch(key){
     case 'a':
       setState(State.PROCESSING);
+      break;
+    case 'p':
+      imageBackground.beginDraw();
+        if(useDemoVideo) imageBackground.image(video, 0, 0);
+        else imageBackground.image(cam, 0, 0);
+      imageBackground.endDraw();
       break;
   } 
 }
