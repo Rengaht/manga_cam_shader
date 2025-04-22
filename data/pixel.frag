@@ -6,6 +6,7 @@ uniform float threshold;
 uniform vec2 texOffset;
 uniform float time;
 uniform float strength;
+uniform sampler2D u_flow;
 
 uniform float progress;
 uniform sampler2D u_character;
@@ -81,22 +82,25 @@ float character(int n, vec2 p){
 
 void main() {
     // Snap texture coordinates to the pixel grid
-    vec2 vTexCoord = vertTexCoord.xy;
+    vec2 vTexCoord = vec2(1.0-vertTexCoord.x, vertTexCoord.y);
+    
     float distort=smoothstep(0.33, 1.0, noise(vTexCoord*vec2(0.1, 2.87)+time*4.2));
-    float pixscale=floor(distort/0.25)+1.0;
+    float pixscale=1.0;//floor(distort/0.25)+1.0;
     
 
     vec2 blockUV = floor(vTexCoord * u_resolution / (pixelSize*pixscale)) * (pixelSize*pixscale) / u_resolution;
-
+    
     float distortx=smoothstep(0.5, 1.0, noise(blockUV*vec2(4.2,93.5)+time*2.2)*2.0-1.0)*strength;
     float distorty=(smoothstep(0.5, 1.0, noise(blockUV*vec2(251.2,3.5)+time*12.2))*2.0-1.0)*strength;
     
     vec2 offset=vec2(distortx,distorty)*pixelSize*pixscale/u_resolution;
     // blockUV += offset;
     // blockUV=mod(blockUV,vec2(1.0));
-    vTexCoord += offset;
+    
+    vec4 uflow=texture(u_flow, vec2(blockUV.x, 1.0-blockUV.y));    
+    // vTexCoord += vec2(uflow.x, uflow.y);
 
-    vec4 color = texture(u_texture, blockUV);
+    vec4 color = texture(u_texture, blockUV-uflow.xy);
     
     vec4 character_tex=1.0-texture(u_character, blockUV);
 
@@ -131,5 +135,5 @@ void main() {
     
     gl_FragColor = vec4((output_color.rgb + title_color.rgb*text_progress), 1.0);
 
-    // gl_FragColor= vec4(vec3(distort), 1.0);
+    // gl_FragColor+= vec4(uflow.xy,0.0, 1.0);
 }

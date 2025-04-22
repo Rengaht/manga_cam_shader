@@ -1,6 +1,9 @@
 import processing.video.*;
 import de.looksgood.ani.*;
 
+import com.thomasdiewald.pixelflow.java.DwPixelFlow;
+import com.thomasdiewald.pixelflow.java.imageprocessing.DwOpticalFlow;
+import com.thomasdiewald.pixelflow.java.imageprocessing.filter.DwFilter;
 
 
 PShader pixelShader;  
@@ -31,8 +34,15 @@ Timer textTimer;
 
 int index=0;
 
-void setup() {
+
+  
+public void settings() {
   size(1280, 720, P2D);
+  smooth(4);
+}
+
+
+void setup() {
      
   pixelShader = loadShader("pixel.frag","pixel.vert");
   pixelShader.set("u_resolution", float(width), float(height));
@@ -51,13 +61,21 @@ void setup() {
 
   loadImages();
 
+  initFlow();
 }
 
 void draw() {
 
   if(cam.available()) {
     cam.read();
+
+    pg_cam.beginDraw();
+    pg_cam.image(cam, 0, 0);
+    pg_cam.endDraw();
+
+    opticalflow.update(pg_cam); 
   }
+  DwFilter.get(context).luminance.apply(pg_cam, pg_cam);
   
   
   pushMatrix();
@@ -87,7 +105,9 @@ void draw() {
       pixelShader.set("text_progress", 1.0-textTimer.value);
       break;
   }
-  
+
+  drawFlow();
+  pixelShader.set("u_flow", pg_oflow);
 
   // rect(0, 0, width, height);
   beginShape();
@@ -112,7 +132,8 @@ void draw() {
     onProgressEnd();
   }
 
-
+// drawFlow();
+  
 
 
   // image(cam, 0, 0, width, height);
