@@ -2,14 +2,15 @@
 
 uniform mat4 modelview;
 uniform mat4 projection;
-
+uniform mat4 texMatrix;
 
 attribute vec4 vertex;
-attribute vec2 texcoord;
+attribute vec2 texCoord;
 
-varying vec2 vertTexCoord;
+varying vec4 vertTexCoord;
 
 void main() {
-    vertTexCoord = texcoord;
+    
+    vertTexCoord = texMatrix * vec4(texCoord, 1.0, 1.0);     
     gl_Position = projection * modelview * vertex;
 }

@@ -18,6 +18,8 @@ varying vec4 vertColor;
 varying vec4 vertTexCoord;
 
 
+int main_char=15728622;
+
 
 // in vec2 vTexCoord;
 // out vec4 fragColor;
@@ -62,24 +64,48 @@ vec4 edge(vec2 vert){
     return sum;
 }
 
+
+float character(int n, vec2 p){
+	p = floor(p*vec2(-4.0, 4.0) + 2.5);
+    if (clamp(p.x, 0.0, 4.0) == p.x)
+	{
+        if (clamp(p.y, 0.0, 4.0) == p.y)	
+		{
+        	int a = int(round(p.x) + 5.0 * round(p.y));
+			if (((n >> a) & 1) == 1) return 1.0;
+		}	
+    }
+	return 0.0;
+}
+
+
 void main() {
     // Snap texture coordinates to the pixel grid
     vec2 vTexCoord = vertTexCoord.xy;
-    float distort=noise(vTexCoord*vec2(23.3,8.7)+time*2.2);
-    float pixscale=floor(distort/0.33)+1.0;
+    float distort=smoothstep(0.33, 1.0, noise(vTexCoord*vec2(0.1, 2.87)+time*4.2));
+    float pixscale=floor(distort/0.25)+1.0;
     
+
     vec2 blockUV = floor(vTexCoord * u_resolution / (pixelSize*pixscale)) * (pixelSize*pixscale) / u_resolution;
+
+    float distortx=smoothstep(0.5, 1.0, noise(blockUV*vec2(4.2,93.5)+time*2.2)*2.0-1.0)*strength;
+    float distorty=(smoothstep(0.5, 1.0, noise(blockUV*vec2(251.2,3.5)+time*12.2))*2.0-1.0)*strength;
     
-    float distortx=smoothstep(0.8, 1.0, noise(blockUV*vec2(4.2,93.5)+time*2.2)*strength);
-    float distorty=smoothstep(0.8, 1.0, noise(blockUV*vec2(251.2,3.5)+time*12.2)*strength*2.0);
-    
-    blockUV += vec2(distortx,distorty);
+    vec2 offset=vec2(distortx,distorty)*pixelSize*pixscale/u_resolution;
+    // blockUV += offset;
     // blockUV=mod(blockUV,vec2(1.0));
+    vTexCoord += offset;
 
     vec4 color = texture(u_texture, blockUV);
-    vec4 character=1.0-texture(u_character, blockUV);
+    
+    vec4 character_tex=1.0-texture(u_character, blockUV);
 
-    color=mix(color, character, progress);
+    color=mix(color, character_tex, progress);
+
+    // draw circle pixel
+    // float pix=length(blockUV*u_resolution+vec2(pixelSize/2.0)-(vTexCoord.xy)*u_resolution)<pixelSize*0.5? 1.0:0.0;
+    vec2 p = mod(vTexCoord*u_resolution/(pixelSize*pixscale/2.0), 2.0) - vec2(1.0);
+    float pix=character(main_char, p);
 
     // gray scale
     float gray = dot(color.rgb, vec3(0.299, 0.587, 0.114));
@@ -88,21 +114,22 @@ void main() {
 
     // float edge=length(edge(blockUV));
     
-    vec3 output_color=color.rgb*gray;
+    vec3 output_color=color.rgb*pix;//*gray;
     
     float discrete=1.0/4.0;
     output_color=floor(output_color/discrete)*discrete;
     // output_color=pow(output_color, vec3(2.0));
-    output_color=smoothstep(vec3(0.5), vec3(1.0),output_color);
+    output_color=smoothstep(vec3(0.25), vec3(1.0),output_color);
+
 
     // if(edge>threshold){
     //     gl_FragColor = vec4(1.0-output_color.rgb, 1.0);
     // }
 
     // title
-    vec4 title_color=texture2D(u_title, vertTexCoord.xy + vec2(0.0,0.05)*pixelSize*smoothstep(0.8, 1.0, distortx));
+    vec4 title_color=texture2D(u_title, vertTexCoord.xy + vec2(0.0,0.05)*pixelSize);
     
-    gl_FragColor = vec4(output_color.rgb + title_color.rgb*text_progress, 1.0);
+    gl_FragColor = vec4((output_color.rgb + title_color.rgb*text_progress), 1.0);
 
     // gl_FragColor= vec4(vec3(distort), 1.0);
 }

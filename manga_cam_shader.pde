@@ -1,9 +1,12 @@
 import processing.video.*;
 import de.looksgood.ani.*;
 
+
+
 PShader pixelShader;  
 
 Capture cam;
+static float pixelSize=8;
 static int camWidth = 1280;
 static int camHeight = 720;
 static String deviceID="FaceTime HD Camera (Built-in)";
@@ -31,7 +34,7 @@ int index=0;
 void setup() {
   size(1280, 720, P2D);
      
-  pixelShader = loadShader("pixel.frag");
+  pixelShader = loadShader("pixel.frag","pixel.vert");
   pixelShader.set("u_resolution", float(width), float(height));
   pixelShader.set("threshold", 0.5);
   pixelShader.set("texOffset", 1.0 / float(width), 1.0 / float(height));
@@ -60,9 +63,10 @@ void draw() {
   pushMatrix();
   shader(pixelShader);
   
-  pixelShader.set("pixelSize", 4.0);  // Try 5, 10, 20, etc.
+  pixelShader.set("pixelSize", pixelSize);  // Try 5, 10, 20, etc.
   pixelShader.set("u_texture", cam); // Or use cam if using webcam
-  pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
+  // pixelShader.set("time", millis()/(100+abs(sin(frameCount/20.0)*500)));
+  pixelShader.set("time", millis()/1000.0);
 
   float ss= sin(strengthTimer.value*PI)+0.5;
   pixelShader.set("strength", ss);
